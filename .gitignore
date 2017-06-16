@@ -1,3 +1,6 @@
+# Hypertext markdown language
+*.html
+
 # Swapfiles
 *.swp
 
