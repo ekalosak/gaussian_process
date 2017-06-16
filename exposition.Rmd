@@ -20,10 +20,18 @@ library(MASS)
 library(reshape)
 ```
 
-# Basic deffinition
-foobar
+# Introduction
+## Deffinition of a gaussian process
+A gaussian process $GP$ over a set $S$ is a continuum of random variables
+$X_{\tau^\star} = \{X_\tau\}$ for $\tau\in\tau^\star\subset\mathbf{R}$ where any finite subset
+$X_T$ where $T = \{t_1,\dots,t_n\}$ where $t_i\in\tau^\star$ for all
+$i\in\{1,\dots,n\}$ are jointly distributed according to a multivariate gaussian
+distribution. You can think about this like a distributions over functions over
+$S$. First, I will consider $S=\mathbf{R}$, forcing the gaussian process to
+induce a distribution over functions over the reals. A handful of draws from
+this induced distribution are depicted below.
 
-# Baby's first visualization
+## Baby's first visualization
 Below I depict discretized draws from a gaussian process.
 
 ```{r}
@@ -69,3 +77,26 @@ plt = ggplot(plt_df_m) +
 ```{r echo=F}
 plt
 ```
+
+You may notice, browsing this code or perceptively reading the introduction,
+that I've left a bit out of the specification of the particular gaussian process
+depicted above.
+
+## A bit more on the deffiniton
+A key to the behavior of the process is its covariance kernel.
+Here, I used a cannonical exponential squared loss
+$k(x_1, x_2) = e^{-\sigma((x_1-x_2)/\ell)^2}$ with a couple tuning
+hyperparameters $\sigma$ and $\ell$. Computing the outer product of the $x$
+values of interest
+(here just $D=`r D`$ points equally spaced between $`r t[1]`$ and $`r t[2]`$)
+using the kernel yeilds a $D\times D$ covariance matrix.
+
+An important point here is that each discretized point on the $X$ axis is, in
+the eyes of the gaussian process, an orthogonal dimension. Thus induced by the
+gaussian process is a multivariate normal distribution over $D$ variables. The
+covariance of these dimensions is induced by the kernel, and in this case, under
+the exponential squared loss, that means that points close in the natural space
+are highly correlated dimensions in the induced distribution. It's this property
+that gives us the probability of a particular function being drawn from the
+induced distribution proportional to its smoothness.
+
