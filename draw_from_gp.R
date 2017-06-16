@@ -21,7 +21,7 @@ lkern = 0.1 # kernel length-scale hyperparameter
 sigkern = 2 # kernel varaince hyperparameter
 
 # Define kernel
-kernel = function(x0, x1){
+kernel_sel = function(x0, x1){
     # Using squared exponential loss
     return(sigkern^2 * exp(-1/2 * (x0-x1)^2 / lkern))
 }
@@ -47,7 +47,7 @@ boxm = function(us){
 xs = seq(t[1], t[2], length.out=D)
 
 # Calculate covariance matrix
-S = outer(xs, xs, kernel)
+S = outer(xs, xs, kernel_sel)
 
 ## Draw joint multivariate gaussian samples
 # # Draw an even number of uniforms
@@ -65,3 +65,35 @@ plt_df = data.frame(x=xs, y=ys)
 plt_df_m = melt(plt_df, id=c("x"))
 plt = ggplot(plt_df_m) +
     geom_line(aes(x=x, y=value, color=variable))
+
+## Now try it with a regression problem
+M = floor(D/10) # number of points to observe from the model
+mu = function(x){
+    return(x^2 * exp(-x^2) + sin(x))
+}
+ys = mu(xs)
+ixs = base::sample(1:D, M)
+xsobv = xs[ixs]
+ysobv = ys[ixs] + rnorm(M, sd=0.1)
+xu = t[2] + 1/2
+gen_posterior = function(xu, xs, ys){
+    ## Generates a posterior function
+
+    # posterior probability f(yu | ys) = N(m, s)
+    K0 = outer(xs, xs, kernel_sel) # kernel of the observed values
+    K1 = outer(xu, xs, kernel_sel)
+    K2 = outer(xu, xu, kernel_sel)
+    K = rbind(cbind(K0, t(K1)), cbind(K1, K2))
+
+    # mean and variance of posterior
+    m = K1 %*% solve(K0) %*% ys
+    s = K2 - K1 %*% solve(K0) %*% t(K1)
+
+    return(
+           function(n){
+               mvrnorm(n, mu = m, Sigma = s)
+           }
+    )
+}
+
+posterior = gen_posterior(xu, xsobv, ysobv)

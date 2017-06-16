@@ -36,14 +36,14 @@ Below I depict discretized draws from a gaussian process.
 
 ```{r}
 # Parameters
-t = c(-1,1) # plotting range
+t = c(-pi,pi) # plotting range
 D = 50*floor(abs(t[1]-t[2])) # number of evenlt spaced collocation points
 K = 10 # number of curves
 lkern = 0.1 # kernel length-scale hyperparameter
 sigkern = 2 # kernel varaince hyperparameter
 
 # Define kernel
-kernel = function(x0, x1){
+kernel_sel = function(x0, x1){
     # Using squared exponential loss
     return(sigkern^2 * exp(-1/2 * (x0-x1)^2 / lkern))
 }
@@ -58,7 +58,7 @@ mu = function(x){
 xs = seq(t[1], t[2], length.out=D)
 
 # Calculate covariance matrix
-S = outer(xs, xs, kernel)
+S = outer(xs, xs, kernel_sel)
 
 # Draw joint multivariate gaussian samples
 ys = t(mvrnorm(K, mu = mu(xs), Sigma=S))
@@ -77,7 +77,7 @@ plt = ggplot(plt_df_m) +
 ```{r echo=F}
 plt
 ```
-
+  
 You may notice, browsing this code or perceptively reading the introduction,
 that I've left a bit out of the specification of the particular gaussian process
 depicted above.
@@ -100,3 +100,184 @@ are highly correlated dimensions in the induced distribution. It's this property
 that gives us the probability of a particular function being drawn from the
 induced distribution proportional to its smoothness.
 
+## An alternative kernel
+Before I get too stuck on the exponential square loss, however useful and
+traditional it may be, it's important to look at different kernels. These
+different kernels will yeild different covariance matricies, but all kerenels
+share an important property: they induce positive semidefinite covariance
+matricies. If this semidefinite stuff is meaningless to you, look it up, but
+also it basically means that the kernel induces a non-negative way to measure
+distances between points in the natural space. It's not a metric, but it's still
+useful to think about the particular square exponential loss kernel like a
+measuring stick - it gives high values for close things, and low values for far
+things.
+
+Now, this isn't neccessarily true for a kernel - remember that it just
+has to induce positive semidefinite covaraince matricies. To drive this home
+let's look at a different kernel:
+
+```{r}
+kernel_01 = function(x0, x1){
+    # Using 0-1 loss
+    return((x0 == x1) + 0)
+}
+
+# Calculate covariance matrix
+S = outer(xs, xs, kernel_01)
+
+# Draw joint multivariate gaussian samples
+ys = t(mvrnorm(K, mu = mu(xs), Sigma=S))
+
+# Plot
+plt_df = data.frame(x=xs, y=ys)
+names(plt_df) = c("x", paste("GP", 1:K, sep=""))
+plt_df_m = melt(plt_df, id=c("x"))
+plt = ggplot(plt_df_m) +
+    geom_line(aes(x=x, y=value, color=variable)) +
+    labs(x="X", y="Y",
+         title=paste(K, "draws from a gaussian process")) +
+    scale_fill_discrete(name="Draw number")
+```
+
+```{r echo=F}
+plt
+```
+  
+Ugly, right? This is because the 0-1 loss kernel forces the covariance matrix to
+be the identity matrix, inducing a spherical gaussian (each dimension is
+independent) in $D$ dimensions. So let's turn this ugly plot on its side to see
+that this is indeed the case.
+
+```{r}
+plt = ggplot(plt_df_m) +
+    geom_freqpoly(aes(value, ..density.., color=variable), bins=floor(D/5)) +
+    stat_function(fun = dnorm, colour = "steelblue", size=1.1)
+plt
+```
+
+## Another alternative kernel
+
+For good measure, let's look at another common kernel
+
+```{r}
+kernel_abs = function(x0, x1){
+    # Using exponential loss
+    return(4^2 * exp(-1/2 * abs(x0-x1) / 0.5))
+}
+
+# Calculate covariance matrix
+S = outer(xs, xs, kernel_abs)
+
+# Draw joint multivariate gaussian samples
+ys = t(mvrnorm(K, mu = mu(xs), Sigma=S))
+
+# Plot
+plt_df = data.frame(x=xs, y=ys)
+names(plt_df) = c("x", paste("GP", 1:K, sep=""))
+plt_df_m = melt(plt_df, id=c("x"))
+plt = ggplot(plt_df_m) +
+    geom_line(aes(x=x, y=value, color=variable)) +
+    labs(x="X", y="Y",
+         title=paste(K, "draws from a gaussian process")) +
+    scale_fill_discrete(name="Draw number")
+```
+
+```{r echo=F}
+plt
+```
+
+# And now a simple application to regression
+You may have noticed that I'm using a constant mean function
+$\mu(x) = 0$ for all $x$. Now, I'll switch to a regression context where I'll
+look at drawing sample functions from a gaussian process with a mean function
+set to the observed values of the function.
+
+## Target function deffinition
+For the sake of example, I'll consider the target function
+$$
+y = f(x) + \epsilon \quad {\rm where} \quad
+f(x) = x^2 e^{-x^2} + {\rm sin}(x) \quad {\rm and} \quad
+\epsilon \sim {\rm iid} N(0,\sigma_\epsilon)
+$$
+
+```{r}
+# Parameters
+M = 7 # number of points to observe from the model
+# NOTE: that if this gets too big, inverting the covariance matrix can bevome
+# numerically unstable resulting in failures to invert (which is ok) or wildly
+# divergent estimates (which could be catastrophic).
+
+# Heterogeneous mean function
+mu = function(x){
+    return(x^2 * exp(-x^2) + sin(x))
+}
+
+ys = mu(xs)
+ixs = base::sample(1:D, M)
+xsobv = xs[ixs]
+ysobv = ys[ixs] + rnorm(M, sd=0.1)
+xu = t[2] + 1/2
+
+# Plot the true function and the observed points
+plt = ggplot(data.frame(x=xs, y=ys)) +
+    geom_line(aes(x=x, y=y), color="steelblue", size=1.1) +
+    geom_point(data=data.frame(x=xsobv, y=ysobv), aes(x=x, y=y), color="coral") +
+    geom_vline(xintercept=xu, color="darkviolet")
+```
+
+```{r echo=F}
+plt
+```
+  
+Next, I'll try to regress a point not in the sample using gaussian proceess
+regression a.k.a. kreiging. The unknown point will be at $x=`r xu`$ depicted
+above by the violet vertical line.
+
+## Regression at a point outside the support
+To regress this point, I'm interested in the posterior distribution
+$f(y_\star \mid \mathbf{y})$.
+By the definition of the gaussian process, we know that the joint distribution
+of the unknown and known points is
+$f(y_\star, \mathbf{y}) = N(0, \mathbf{K})$ where $\mathbf{K}$ is calculated
+using the kernel. Ommitting the derrivation for now, we use the fact that the
+posterior takes the following form:
+
+```{r}
+gen_posterior = function(xu, xs, ys){
+    ## Generates a posterior function
+
+    # posterior probability f(yu | ys) = N(m, s)
+    K0 = outer(xs, xs, kernel_sel) # kernel of the observed values
+    K1 = outer(xu, xs, kernel_sel)
+    K2 = outer(xu, xu, kernel_sel)
+    K = rbind(cbind(K0, t(K1)), cbind(K1, K2))
+
+    # mean and variance of posterior
+    m = K1 %*% solve(K0) %*% ys
+    s = K2 - K1 %*% solve(K0) %*% t(K1)
+
+    return(
+           function(n){
+               mvrnorm(n, mu = m, Sigma = s)
+           }
+    )
+}
+
+posterior = gen_posterior(xu, xsobv, ysobv)
+
+n = 100
+post_obs = posterior(n)
+plt_post = ggplot(data=data.frame(y=post_obs)) +
+    geom_histogram(aes(x=y), bins=floor(n/4))
+plt_post
+```
+  
+The 64% credible interval for the estimated value at
+$x=`r xu`$ is $`r mean(post_obs)`\pm`r sqrt(var(post_obs))`$.
+The true value using the model introduced at the beginning of this section is
+$`r mu(xu)`$.
+
+# Sources
+1. https://en.wikipedia.org/wiki/Gaussian_process
+2. https://arxiv.org/abs/1505.02965
+3. http://www.gaussianprocess.org/gpml/chapters/RW2.pdf
