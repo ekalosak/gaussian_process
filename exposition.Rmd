@@ -465,6 +465,12 @@ plt_post_band
 As you can see, tuning the model helps keep the band reasonably tight, although
 the mean function doesn't seem to shift all that much.
 
+A final note before moving on: there's a good way to account for the noise
+$\epsilon$ in the model, outlined in source [3], if you have a priori a good
+sense of the level of the noise $\sigma_\epsilon$. It is possible to estimate
+this noise using something like leave-one-out cross validation but I've ommitted
+this proceedure.
+
 # 2D gaussian process
 Coming soon
 
