@@ -67,15 +67,18 @@ plt = ggplot(plt_df_m) +
     geom_line(aes(x=x, y=value, color=variable))
 
 ## Now try it with a regression problem
-M = floor(D/10) # number of points to observe from the model
+M = 10 # floor(D/10) # number of points to observe from the model
 mu = function(x){
     return(x^2 * exp(-x^2) + sin(x))
 }
 ys = mu(xs)
-ixs = base::sample(1:D, M)
+# ixs = base::sample(1:D, M)
+ixs = ceiling(seq(1, D, length.out=M))
 xsobv = xs[ixs]
 ysobv = ys[ixs] + rnorm(M, sd=0.1)
-xu = t[2] + 1/2
+# xu = t[2] + 1/2
+m = 50
+xu = seq(t[1], t[2], length.out=m)
 gen_posterior = function(xu, xs, ys){
     ## Generates a posterior function
 
@@ -97,3 +100,15 @@ gen_posterior = function(xu, xs, ys){
 }
 
 posterior = gen_posterior(xu, xsobv, ysobv)
+
+n = 10
+draws = posterior(n)
+
+df_post = data.frame(t(rbind(draws, xu)))
+names(df_post) = c(paste("Draw", 1:n), "X")
+df_post_m = melt(df_post, id="X")
+plt_post = ggplot(df_post_m) +
+    geom_line(aes(x=X, y=value, color=variable)) +
+    geom_point(data=data.frame(x=xsobv, y=ysobv),
+               aes(x=x, y=y),
+               color="coral")

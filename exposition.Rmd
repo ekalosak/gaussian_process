@@ -37,10 +37,10 @@ Below I depict discretized draws from a gaussian process.
 ```{r}
 # Parameters
 t = c(-pi,pi) # plotting range
-D = 50*floor(abs(t[1]-t[2])) # number of evenlt spaced collocation points
+D = 20*floor(abs(t[1]-t[2])) # number of evenlt spaced collocation points
 K = 10 # number of curves
-lkern = 0.1 # kernel length-scale hyperparameter
-sigkern = 2 # kernel varaince hyperparameter
+lkern = 2 # kernel length-scale hyperparameter
+sigkern = 1.6 # kernel varaince hyperparameter
 
 # Define kernel
 kernel_sel = function(x0, x1){
@@ -70,8 +70,8 @@ plt_df_m = melt(plt_df, id=c("x"))
 plt = ggplot(plt_df_m) +
     geom_line(aes(x=x, y=value, color=variable)) +
     labs(x="X", y="Y",
-         title=paste(K, "draws from a gaussian process")) +
-    scale_fill_discrete(name="Draw number")
+         title=paste(K, "draws from a gaussian process"),
+         color="Draw number")
 ```
 
 ```{r echo=F}
@@ -135,8 +135,8 @@ plt_df_m = melt(plt_df, id=c("x"))
 plt = ggplot(plt_df_m) +
     geom_line(aes(x=x, y=value, color=variable)) +
     labs(x="X", y="Y",
-         title=paste(K, "draws from a gaussian process")) +
-    scale_fill_discrete(name="Draw number")
+         title=paste(K, "draws from a gaussian process"),
+         color="Draw number")
 ```
 
 ```{r echo=F}
@@ -178,8 +178,8 @@ plt_df_m = melt(plt_df, id=c("x"))
 plt = ggplot(plt_df_m) +
     geom_line(aes(x=x, y=value, color=variable)) +
     labs(x="X", y="Y",
-         title=paste(K, "draws from a gaussian process")) +
-    scale_fill_discrete(name="Draw number")
+         title=paste(K, "draws from a gaussian process"),
+         color="Draw number")
 ```
 
 ```{r echo=F}
@@ -213,9 +213,10 @@ mu = function(x){
 }
 
 ys = mu(xs)
-ixs = base::sample(1:D, M)
+# ixs = base::sample(1:D, M)
+ixs = ceiling(seq(1, D, length.out=M))
 xsobv = xs[ixs]
-ysobv = ys[ixs] + rnorm(M, sd=0.1)
+ysobv = ys[ixs] + rnorm(M, sd=0.4)
 xu = t[2] + 1/2
 
 # Plot the true function and the observed points
@@ -276,6 +277,66 @@ The 64% credible interval for the estimated value at
 $x=`r xu`$ is $`r mean(post_obs)`\pm`r sqrt(var(post_obs))`$.
 The true value using the model introduced at the beginning of this section is
 $`r mu(xu)`$.
+
+## Posterior 90% credible band
+Here I calculate the 90% posterior credible band which serves as a reigon of
+reasonable confidence for the location of the target curve. I calculate this
+band by drawing from the posterior at many points along the domain of the
+target function inside and beyond its sampling support. Insodoing I gather a
+sample of potential curves and calculate the emperical quantiles to recover the
+confidence band. Note that the analytical posterior 90% confidence band is
+trivially accessible via the gaussian process assumption and the form of the
+posterior distriution - the results shouldn't be all that different in one
+dimension where the law of large numbers works quickly.
+
+```{r}
+# Parameters
+m = 50 # resolution of the posterior
+n = 10 # number of draws from the posterior
+d = t[2] - t[1] # length of the sampling support
+
+# Collocated posterior points
+xus = seq(t[1] - d/10, t[2] + d/10, length.out=m)
+
+# Draw from the posterior for an illustrative plot
+posterior_multi = gen_posterior(xus, xsobv, ysobv)
+draws = posterior_multi(n)
+
+# Plot the aforementioned illustrative plot of draws from the posterior
+df_post = data.frame(t(rbind(draws, xus)))
+names(df_post) = c(paste("Draw", 1:n), "X")
+df_post_m = melt(df_post, id="X")
+plt_post = ggplot(df_post_m) +
+    geom_line(aes(x=X, y=value, color=variable)) +
+    geom_point(data=data.frame(x=xsobv, y=ysobv),
+               aes(x=x, y=y),
+               color="coral") +
+    labs(x="X", y="Y", title=paste(n, "draws from the posterior"),
+         color="Draw number")
+
+# Draw for the emperical 90% band and calculate the band
+n = 50
+draws = posterior_multi(n)
+qs = apply(t(draws), 1, (function(x) (return(quantile(x, c(0.05, 0.95))))))
+
+# Plot the 90% band
+df_post_band = data.frame(t(rbind(qs, xus)))
+names(df_post_band) = c("q0", "q1", "X")
+plt_post_band = ggplot(df_post_band) +
+    geom_ribbon(aes(ymin=q0, ymax=q1, x=X), alpha=0.6) +
+    geom_point(data=data.frame(x=xsobv, y=ysobv),
+               aes(x=x, y=y),
+               color="coral") +
+    geom_line(data=data.frame(x=xs, y=ys), aes(x=x, y=y), color="steelblue") +
+    labs(x="X", y="Y", title="90% credible band")
+
+draws = posterior_multi(n)
+```
+
+```{r echo=F}
+plt_post
+plt_post_band
+```
 
 # Sources
 1. https://en.wikipedia.org/wiki/Gaussian_process
