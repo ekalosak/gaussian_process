@@ -112,3 +112,37 @@ plt_post = ggplot(df_post_m) +
     geom_point(data=data.frame(x=xsobv, y=ysobv),
                aes(x=x, y=y),
                color="coral")
+
+## Grid search to maximize the log likelihood
+kern = function(x0, x1, sig, ell){
+    # Using squared exponential loss
+    return(sig^2 * exp(-1/2 * (x0-x1)^2 / ell))
+}
+loglik = function(sig, ell){
+    kern_sl = function(x0, x1){
+        return(kern(x0, x1, sig, ell))
+    }
+    x = xsobv
+    y = ysobv
+    n = length(x)
+    K = outer(x, x, kern_sl)
+    r = -1/2*t(y)%*%solve(K)%*%y - 1/2*log(det(K)) - n/2*log(pi*2)
+    return(r)
+}
+
+G = 15 # resolution of gridsearch
+sigbs = c(0.3, 3) # bounds on parameters
+ellbs = c(0.1, 1.3) # bounds on parameters
+sigs = log(seq(exp(sigbs[1]), exp(sigbs[2]), length.out=G))
+ells = log(seq(exp(ellbs[1]), exp(ellbs[2]), length.out=G))
+params = expand.grid(sigs, ells)
+names(params) = c("sig", "ell")
+params$loglik = apply(params, 1, (function(r)(return(loglik(r[1], r[2])))))
+params$loglik = log(-params$loglik)
+
+# Plot the grid search for parameters
+ix = which(params$loglik == min(params$loglik))[1]
+plt_params = ggplot(data=params, aes(x=sig, y=ell, z=loglik, fill=loglik)) +
+    geom_contour(aes(color=loglik), size=1.1, color="coral") +
+    geom_hline(aes(yintercept=params$ell[ix])) +
+    geom_vline(aes(xintercept=params$sig[ix]))
