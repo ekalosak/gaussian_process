@@ -334,18 +334,33 @@ plt_post_band_tuned
 ## @knitr gp2d
 t = c(0, 1)
 D = 10
-d = 2 # don't change this without looking through following snippets
-x1s = x2s = seq(t[1], t[2], length.out=D)
-gd = expand.grid(x1s, x2s)
-dmx = as.matrix(dist(gd))
+x1s = x2s = seq(t[1], t[2], length.out=D) # marginal collocation grid points
+gd = expand.grid(x1s, x2s) # collocated grid
+dm = dist(gd)
+# dmx = as.matrix(dm) # distance between each point on the collocated grid
+
+mu2d = function(pts){
+    # pts in R^(n x p) -> Ys in R^n
+    # and I guess p = 2
+    ys = apply(pts, 1, prod)
+    return(ys)
+}
+
+mus = mu2d(gd)
+# TODO: straighten out the math here
 
 kernel_on_dist = function(r){
     # r is the distance between points already computed by e.g. dist()
     ell = 1
-    a = 1/sqrt(pi) * exp(-1/2*r/ell) # exponential kernel wrt Malhab dist
+    a = 1/sqrt(pi^2) * exp(-1/2*r/ell) # exponential kernel wrt Malhab dist
     return(a)
 }
 
-S = kernel_on_dist(dmx)
+S = kernel_on_dist(dm)
 
 # ys = t(mvrnorm(1, mu = 0, Sigma=S))
+
+# TODO: plot the 2d samples
+# TODO: plot the 2d draws from the prior
+# TODO: plot the 2d draws from the posterior
+# TODO: plot the 2d 65% credible interval
