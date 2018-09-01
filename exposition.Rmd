@@ -472,7 +472,37 @@ this noise using something like leave-one-out cross validation but I've ommitted
 this proceedure.
 
 # 2D gaussian process
-Coming soon
+A 2D GP is not much different from a 1D GP. The domain is similarly discretized
+and the covariance matrix is computed as $s_{ij} = f(\|x_i-x_j\|)$ for
+$x_{i,j} \textrm{ each }\in \mathbb{R}^2$.
+
+```{r}
+t = c(0, 1)
+D = 10
+d = 2 # don't change this without looking through following snippets
+x1s = x2s = seq(t[1], t[2], length.out=D)
+S = matrix(NA, D^d, D^d)
+C = diag(d)
+
+kernel2d = function(x0, x1){
+    # x0, x1 are dx1 matrices
+    ell = 1
+    b = x0 - x1
+    r = t(b) %*% solve(C) %*% b
+    a = 1/sqrt(det(pi*C)) * exp(-1/2*r/ell)
+    return(a)
+}
+
+for(x in 1:D){
+    for(y in 1:D){
+        # x0 = c(x1s[x], x2s[y])
+        # S[x,y] = kernel2d()
+        # TODO: this
+    }
+}
+
+# ys = t(mvrnorm(1, mu = 0, Sigma=S))
+```
 
 # Sources
 1. https://en.wikipedia.org/wiki/Gaussian_process
