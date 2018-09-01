@@ -1,3 +1,18 @@
+# Author: Eric Kalosa-Kenyon
+# A simple, first-pass gaussian prococess
+#
+# Methods:  (concrete type "R" below is reals, or float)
+#   kernel_sel : exponential squared loss :: R -> R -> R
+#   mu : mean function :: R -> R
+#   boxm : Box-Meuler transform :: (R, R) -> R
+#   gen_posterior : make posterior function :: [R] -> [R] -> [R] -> (Int -> [R])
+#   kern : parameterized exp square loss kernel :: R -> R -> R -> R -> R
+#
+# Plots:
+#   plt : draws from a gaussian process prior
+#   plt_post : draws from the posterior
+#   plt_params : grid search solution and isoclines for parameter optimization
+
 rm(list=ls())
 set.seed(33)
 
