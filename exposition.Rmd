@@ -14,7 +14,7 @@ output:
 ```{r message=F, echo=F}
 rm(list=ls())
 library("knitr")
-read_chunk("./gp1d.R")
+read_chunk("./gp.R")
 ```
 
 ```{r load_libraries, echo=F}
