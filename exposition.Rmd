@@ -11,20 +11,20 @@ output:
     toc: yes
 ---
 
-```{r echo=F}
+```{r message=F, echo=F}
 rm(list=ls())
-set.seed(33)
+library("knitr")
+read_chunk("./gp1d.R")
+```
 
-library(ggplot2)
-library(MASS)
-library(reshape)
-library(latex2exp)
+```{r load_libraries, echo=F}
 ```
 
 # Introduction
 ## Deffinition of a gaussian process
 A gaussian process $GP$ over a set $S$ is a continuum of random variables
-$X_{\tau^\star} = \{X_\tau\}$ for $\tau\in\tau^\star\subset\mathbf{R}$ where any finite subset
+$X_{\tau^\star} = \{X_\tau\}$ for $\tau\in\tau^\star\subset\mathbf{R}$ where any
+finite subset
 $X_T$ where $T = \{t_1,\dots,t_n\}$ where $t_i\in\tau^\star$ for all
 $i\in\{1,\dots,n\}$ are jointly distributed according to a multivariate gaussian
 distribution. You can think about this like a distributions over functions over
@@ -35,49 +35,12 @@ this induced distribution are depicted below.
 ## Baby's first visualization
 Below I depict discretized draws from a gaussian process.
 
-```{r}
-# Parameters
-t = c(-pi,pi) # plotting range
-D = 20*floor(abs(t[1]-t[2])) # number of evenlt spaced collocation points
-K = 10 # number of curves
-lkern = 0.2 # kernel length-scale hyperparameter
-sigkern = 2.7 # kernel varaince hyperparameter
-
-# Define kernel
-kernel_sel = function(x0, x1){
-    # Using squared exponential loss
-    return(sigkern^2 * exp(-1/2 * (x0-x1)^2 / lkern))
-}
-
-# Define mean function
-mu = function(x){
-    # Constant mean
-    return(0*x)
-}
-
-# Collocate X values
-xs = seq(t[1], t[2], length.out=D)
-
-# Calculate covariance matrix
-S = outer(xs, xs, kernel_sel)
-
-# Draw joint multivariate gaussian samples
-ys = t(mvrnorm(K, mu = mu(xs), Sigma=S))
-
-# Plot
-plt_df = data.frame(x=xs, y=ys)
-names(plt_df) = c("x", paste("GP", 1:K, sep=""))
-plt_df_m = melt(plt_df, id=c("x"))
-plt = ggplot(plt_df_m) +
-    geom_line(aes(x=x, y=value, color=variable)) +
-    labs(x="X", y="Y",
-         title=paste(K, "draws from a gaussian process"),
-         color="Draw number")
+```{r set_params1}
 ```
 
-```{r echo=F}
-plt
+```{r plot_basic_gp, echo=F}
 ```
+
   
 You may notice, browsing this code or perceptively reading the introduction,
 that I've left a bit out of the specification of the particular gaussian process
@@ -117,74 +80,31 @@ Now, this isn't neccessarily true for a kernel - remember that it just
 has to induce positive semidefinite covaraince matricies. To drive this home
 let's look at a different kernel:
 
-```{r}
-kernel_01 = function(x0, x1){
-    # Using 0-1 loss
-    return((x0 == x1) + 0)
-}
-
-# Calculate covariance matrix
-S = outer(xs, xs, kernel_01)
-
-# Draw joint multivariate gaussian samples
-ys = t(mvrnorm(K, mu = mu(xs), Sigma=S))
-
-# Plot
-plt_df = data.frame(x=xs, y=ys)
-names(plt_df) = c("x", paste("GP", 1:K, sep=""))
-plt_df_m = melt(plt_df, id=c("x"))
-plt = ggplot(plt_df_m) +
-    geom_line(aes(x=x, y=value, color=variable)) +
-    labs(x="X", y="Y",
-         title=paste(K, "draws from a gaussian process"),
-         color="Draw number")
+```{r alt_kernel}
 ```
 
-```{r echo=F}
-plt
+```{r plot_01_kernel, echo=F}
 ```
+
   
 Ugly, right? This is because the 0-1 loss kernel forces the covariance matrix to
 be the identity matrix, inducing a spherical gaussian (each dimension is
 independent) in $D$ dimensions. So let's turn this ugly plot on its side to see
-that this is indeed the case.
+that this is indeed the case. (By turning it on its side, I mean that we plot a
+density of the Y values irrespective of the X values to see that they are more
+or less gaussian.)
 
-```{r}
-plt = ggplot(plt_df_m) +
-    geom_freqpoly(aes(value, ..density.., color=variable), bins=floor(D/5)) +
-    stat_function(fun = dnorm, colour = "steelblue", size=1.1)
-plt
+```{r plot_01_kernel_sideways, echo=F}
 ```
 
 ## Another alternative kernel
 
 For good measure, let's look at another common kernel
 
-```{r}
-kernel_abs = function(x0, x1){
-    # Using exponential loss
-    return(4^2 * exp(-1/2 * abs(x0-x1) / 0.5))
-}
-
-# Calculate covariance matrix
-S = outer(xs, xs, kernel_abs)
-
-# Draw joint multivariate gaussian samples
-ys = t(mvrnorm(K, mu = mu(xs), Sigma=S))
-
-# Plot
-plt_df = data.frame(x=xs, y=ys)
-names(plt_df) = c("x", paste("GP", 1:K, sep=""))
-plt_df_m = melt(plt_df, id=c("x"))
-plt = ggplot(plt_df_m) +
-    geom_line(aes(x=x, y=value, color=variable)) +
-    labs(x="X", y="Y",
-         title=paste(K, "draws from a gaussian process"),
-         color="Draw number")
+```{r abs_kernel}
 ```
 
-```{r echo=F}
-plt
+```{r plot_abs_kernel, echo=F}
 ```
 
 # And now a simple application to regression
@@ -201,35 +121,12 @@ f(x) = x^2 e^{-x^2} + {\rm sin}(x) \quad {\rm and} \quad
 \epsilon \sim {\rm iid} N(0,\sigma_\epsilon)
 $$
 
-```{r}
-# Parameters
-M = 7 # number of points to observe from the model
-# NOTE: that if this gets too big, inverting the covariance matrix can bevome
-# numerically unstable resulting in failures to invert (which is ok) or wildly
-# divergent estimates (which could be catastrophic).
-
-# Heterogeneous mean function
-mu = function(x){
-    return(x^2 * exp(-x^2) + sin(x))
-}
-
-ys = mu(xs)
-# ixs = base::sample(1:D, M)
-ixs = ceiling(seq(1, D, length.out=M))
-xsobv = xs[ixs]
-ysobv = ys[ixs] + rnorm(M, sd=0.4)
-xu = t[2] + 1/2
-
-# Plot the true function and the observed points
-plt = ggplot(data.frame(x=xs, y=ys)) +
-    geom_line(aes(x=x, y=y), color="steelblue", size=1.1) +
-    geom_point(data=data.frame(x=xsobv, y=ysobv), aes(x=x, y=y), color="coral") +
-    geom_vline(xintercept=xu, color="darkviolet")
+```{r gaus_spline}
 ```
 
-```{r echo=F}
-plt
+```{r plot_regression_setup, echo=F}
 ```
+
   
 Next, I'll try to regress a point not in the sample using gaussian proceess
 regression a.k.a. kreiging. The unknown point will be at $x=`r xu`$ depicted
@@ -244,35 +141,12 @@ $f(y_\star, \mathbf{y}) = N(0, \mathbf{K})$ where $\mathbf{K}$ is calculated
 using the kernel. Ommitting the derrivation for now, we use the fact that the
 posterior takes the following form:
 
-```{r}
-gen_posterior = function(xu, xs, ys, ker=kernel_sel){
-    ## Generates a posterior function
-
-    # posterior probability f(yu | ys) = N(m, s)
-    K0 = outer(xs, xs, ker) # kernel of the observed values
-    K1 = outer(xu, xs, ker)
-    K2 = outer(xu, xu, ker)
-    K = rbind(cbind(K0, t(K1)), cbind(K1, K2))
-
-    # mean and variance of posterior
-    m = K1 %*% solve(K0) %*% ys
-    s = K2 - K1 %*% solve(K0) %*% t(K1)
-
-    return(
-           function(n){
-               mvrnorm(n, mu = m, Sigma = s)
-           }
-    )
-}
-
-posterior = gen_posterior(xu, xsobv, ysobv)
-
-n = 100
-post_obs = posterior(n)
-plt_post = ggplot(data=data.frame(y=post_obs)) +
-    geom_histogram(aes(x=y), bins=floor(n/4))
-plt_post
+```{r kreiging}
 ```
+
+```{r plot_posterior, echo=F}
+```
+
   
 The 64% credible interval for the estimated value at
 $x=`r xu`$ is $`r mean(post_obs)`\pm`r sqrt(var(post_obs))`$.
@@ -290,51 +164,10 @@ trivially accessible via the gaussian process assumption and the form of the
 posterior distriution - the results shouldn't be all that different in one
 dimension where the law of large numbers works quickly.
 
-```{r}
-# Parameters
-m = 50 # resolution of the posterior
-n = 10 # number of draws from the posterior
-d = t[2] - t[1] # length of the sampling support
-
-# Collocated posterior points
-xus = seq(t[1] - d/10, t[2] + d/10, length.out=m)
-
-# Draw from the posterior for an illustrative plot
-posterior_multi = gen_posterior(xus, xsobv, ysobv)
-draws = posterior_multi(n)
-
-# Plot the aforementioned illustrative plot of draws from the posterior
-df_post = data.frame(t(rbind(draws, xus)))
-names(df_post) = c(paste("Draw", 1:n), "X")
-df_post_m = melt(df_post, id="X")
-plt_post = ggplot(df_post_m) +
-    geom_line(aes(x=X, y=value, color=variable)) +
-    geom_point(data=data.frame(x=xsobv, y=ysobv),
-               aes(x=x, y=y),
-               color="coral") +
-    labs(x="X", y="Y", title=paste(n, "draws from the posterior"),
-         color="Draw number")
-
-# Draw for the emperical 90% band and calculate the band
-n = 50
-draws = posterior_multi(n)
-qs = apply(t(draws), 1, (function(x) (return(quantile(x, c(0.05, 0.95))))))
-
-# Plot the 90% band
-df_post_band = data.frame(t(rbind(qs, xus)))
-names(df_post_band) = c("q0", "q1", "X")
-plt_post_band = ggplot(df_post_band) +
-    geom_ribbon(aes(ymin=q0, ymax=q1, x=X), alpha=0.6) +
-    geom_point(data=data.frame(x=xsobv, y=ysobv),
-               aes(x=x, y=y),
-               color="coral") +
-    geom_line(data=data.frame(x=xs, y=ys), aes(x=x, y=y), color="steelblue") +
-    labs(x="X", y="Y", title=paste("90% credible band using", n, "draws"))
+```{r credible_band}
 ```
 
-```{r echo=F}
-plt_post
-plt_post_band
+```{r plot_credible_band, echo=F}
 ```
 
 ## Tuning the model
@@ -362,104 +195,21 @@ $$
 Maximizing the log likelihood is equivalent to minimizing the log negative log
 likelihood, and this is the optimization I perform below.
 
-```{r}
-## Grid search to maximize the log likelihood
-kern = function(x0, x1, sig, ell){
-    # Using squared exponential loss
-    return(sig^2 * exp(-1/2 * (x0-x1)^2 / ell))
-}
-
-loglik = function(sig, ell){
-    kern_sl = function(x0, x1){
-        return(kern(x0, x1, sig, ell))
-    }
-    x = xsobv
-    y = ysobv
-    n = length(x)
-    K = outer(x, x, kern_sl)
-    r = -1/2*t(y)%*%solve(K)%*%y - 1/2*log(det(K)) - n/2*log(pi*2)
-    return(r)
-}
-
-## Parameterize and calculate log likelihoods
-G = 50 # resolution of gridsearch
-sigbs = c(0.5, 1.5) # bounds on parameters
-ellbs = c(0.01, 1.5) # bounds on parameters
-sigs = log(seq(exp(sigbs[1]), exp(sigbs[2]), length.out=G))
-ells = log(seq(exp(ellbs[1]), exp(ellbs[2]), length.out=G))
-params = expand.grid(sigs, ells) # generate all pairs of sigs and ells
-names(params) = c("sig", "ell")
-
-params$loglik = apply(params, 1, (function(r)(return(loglik(r[1], r[2])))))
-params$loglik = log(-params$loglik)
-
-# Plot the grid search for parameters
-ix = which(params$loglik == min(params$loglik))[1]
-sigopt = params$sig[ix]
-ellopt = params$ell[ix]
-plt_params = ggplot(data=params, aes(x=sig, y=ell, z=loglik, fill=loglik)) +
-    geom_contour(aes(color=loglik), binwidth=0.05, color="steelblue") +
-    geom_hline(aes(yintercept=ellopt), color="tomato") +
-    geom_vline(aes(xintercept=sigopt), color="darkviolet") +
-    labs(x=TeX("$\\sigma_k$"),
-         y="l",
-         title="Grid search for optimal kernel parameters")
+```{r tune_model}
 ```
 
-```{r echo=F}
-plt_params
+```{r plot_parameters, echo=F}
 ```
+
   
 With the optimizing parameters $\sigma_k = `r sigopt`$ in purple and
 $\ell = `r ellopt`$ in red, I perform the gaussian process regression again to
 see what better parameters do for the accuracy of the problem.
 
-```{r echo=F}
-# Parameters
-m = 50 # resolution of the posterior
-n = 10 # number of draws from the posterior
-d = t[2] - t[1] # length of the sampling support
+```{r draw_tuned_post}
+```
 
-# Collocated posterior points
-xus = seq(t[1] - d/10, t[2] + d/10, length.out=m)
-
-# Draw for the emperical 90% band and calculate the band
-kern_sel_opt = function(x0, x1){
-    return(sigopt^2 * exp(-1/2 * (x0-x1)^2 / ellopt))
-}
-posterior_opt = gen_posterior(xus, xsobv, ysobv, ker=kern_sel_opt)
-draws = posterior_opt(n)
-qs = apply(t(draws), 1, (function(x) (return(quantile(x, c(0.05, 0.95))))))
-
-# Plot the aforementioned illustrative plot of draws from the posterior
-df_post = data.frame(t(rbind(draws, xus)))
-names(df_post) = c(paste("Draw", 1:n), "X")
-df_post_m = melt(df_post, id="X")
-plt_post = ggplot(df_post_m) +
-    geom_line(aes(x=X, y=value, color=variable)) +
-    geom_point(data=data.frame(x=xsobv, y=ysobv),
-               aes(x=x, y=y),
-               color="coral") +
-    labs(x="X", y="Y", title=paste(n, "draws from the optimized posterior"),
-         color="Draw number")
-
-
-# Plot the 90% band
-n = 50 # number of draws from the posterior
-draws = posterior_opt(n)
-qs = apply(t(draws), 1, (function(x) (return(quantile(x, c(0.05, 0.95))))))
-df_post_band = data.frame(t(rbind(qs, xus)))
-names(df_post_band) = c("q0", "q1", "X")
-plt_post_band = ggplot(df_post_band) +
-    geom_ribbon(aes(ymin=q0, ymax=q1, x=X), alpha=0.6) +
-    geom_point(data=data.frame(x=xsobv, y=ysobv),
-               aes(x=x, y=y),
-               color="coral") +
-    geom_line(data=data.frame(x=xs, y=ys), aes(x=x, y=y), color="steelblue") +
-    labs(x="X", y="Y", title=paste("90% credible band using", n, "draws"))
-
-plt_post
-plt_post_band
+```{r plot_tuned_post, echo=F}
 ```
 
 As you can see, tuning the model helps keep the band reasonably tight, although
@@ -476,32 +226,7 @@ A 2D GP is not much different from a 1D GP. The domain is similarly discretized
 and the covariance matrix is computed as $s_{ij} = f(\|x_i-x_j\|)$ for
 $x_{i,j} \textrm{ each }\in \mathbb{R}^2$.
 
-```{r}
-t = c(0, 1)
-D = 10
-d = 2 # don't change this without looking through following snippets
-x1s = x2s = seq(t[1], t[2], length.out=D)
-S = matrix(NA, D^d, D^d)
-C = diag(d)
-
-kernel2d = function(x0, x1){
-    # x0, x1 are dx1 matrices
-    ell = 1
-    b = x0 - x1
-    r = t(b) %*% solve(C) %*% b
-    a = 1/sqrt(det(pi*C)) * exp(-1/2*r/ell)
-    return(a)
-}
-
-for(x in 1:D){
-    for(y in 1:D){
-        # x0 = c(x1s[x], x2s[y])
-        # S[x,y] = kernel2d()
-        # TODO: this
-    }
-}
-
-# ys = t(mvrnorm(1, mu = 0, Sigma=S))
+```{r gp2d}
 ```
 
 # Sources
