@@ -21,12 +21,12 @@ read_chunk("./gp.R")
 ```
 
 # Introduction
-## Deffinition of a Gaussian Process
+## Definition of a Gaussian Process
 A Gaussian Process is a set of random variables $S=\{X_\tau | \tau \in T\}$
 indexed by a set $T$, where usually $T \subseteq \mathbb{R}$ where any
 finite subset $s \subset S, card(s) < \infty$ of random variables are jointly
 normally distributed. That is, if you pick e.g. two $X_\tau$ from $S$, they'll
-be distrubted under the joint distribution e.g.
+be distributed under the joint distribution e.g.
 $$
 f_{X_1, X_2}(x_1, x_2) =
 \frac{1}{2\pi\sigma^2} e^{-1/(2\sigma^2)*(x_1^2 + x_2^2)}
@@ -46,14 +46,14 @@ You may notice, browsing this code or perceptively reading the introduction,
 that I've left a bit out of the specification of the particular Gaussian Process
 depicted above.
 
-## A bit more on the deffiniton
+## A bit more on the definition
 A key to the behavior of the process is its covariance kernel.
-Above, I used a cannonical exponential squared loss
+Above, I used a canonical exponential squared loss
 $k(x_1, x_2) = e^{-\sigma((x_1-x_2)/\ell)^2}$ with a couple tuning
 hyperparameters: $\sigma$ and $\ell$. Computing the outer product of the $x$
 values of interest
 (here just $D=`r D`$ points equally spaced between $`r t[1]`$ and $`r t[2]`$)
-using the kernel yeilds a $D\times D$ covariance matrix:
+using the kernel yields a $D\times D$ covariance matrix:
 
 $$
 \Sigma_s = \[k(x_i, x_j)\]_{i,j \in T}
@@ -71,17 +71,17 @@ induced distribution proportional to its smoothness.
 ## An alternative kernel
 Before I get too stuck on the exponential square loss, however useful and
 traditional it may be, it's important to look at different kernels. These
-different kernels will yeild different covariance matricies, but all kerenels
+different kernels will yield different covariance matrices, but all kernels
 share an important property: they induce positive semidefinite covariance
-matricies. If this semidefinite stuff is meaningless to you, look it up, but
+matrices. If this semidefinite stuff is meaningless to you, look it up, but
 also it basically means that the kernel induces a non-negative way to measure
 distances between points in the natural space. It's not a metric, but it's still
 useful to think about the particular square exponential loss kernel like a
 measuring stick - it gives high values for close things, and low values for far
 things.
 
-Now, this isn't neccessarily true for a kernel - remember that it just
-has to induce positive semidefinite covaraince matricies. To drive this home
+Now, this isn't necessarily true for a kernel - remember that it just
+has to induce positive semidefinite covariance matrices. To drive this home
 let's look at a different kernel:
 
 ```{r alt_kernel}
@@ -117,7 +117,7 @@ $\mu(x) = 0$ for all $x$. Now, I'll switch to a regression context where I'll
 look at drawing sample functions from a Gaussian Process with a mean function
 set to the observed values of the function.
 
-## Target function deffinition
+## Target function definition
 For the sake of example, I'll consider the target function
 $$
 y = f(x) + \epsilon \quad {\rm where} \quad
@@ -132,7 +132,7 @@ $$
 ```
 
   
-Next, I'll try to regress a point not in the sample using Gaussian proceess
+Next, I'll try to regress a point not in the sample using Gaussian process
 regression a.k.a. kreiging. The unknown point will be at $x=`r xu`$ depicted
 above by the violet vertical line.
 
@@ -142,7 +142,7 @@ $f(y_\star \mid \mathbf{y})$.
 By the definition of the Gaussian Process, we know that the joint distribution
 of the unknown and known points is
 $f(y_\star, \mathbf{y}) = N(0, \mathbf{K})$ where $\mathbf{K}$ is calculated
-using the kernel. Ommitting the derrivation for now, we use the fact that the
+using the kernel. Omitting the derivation for now, we use the fact that the
 posterior takes the following form:
 
 ```{r kreiging}
@@ -158,14 +158,14 @@ The true value using the model introduced at the beginning of this section is
 $`r mu(xu)`$. Notice that this is wide, but it does contain the true value.
 
 ## Posterior 90% credible band
-Here I calculate the 90% posterior credible band which serves as a reigon of
+Here I calculate the 90% posterior credible band which serves as a region of
 reasonable confidence for the location of the target curve. I calculate this
 band by drawing from the posterior at many points along the domain of the
 target function inside and beyond its sampling support. Insodoing I gather a
-sample of potential curves and calculate the emperical quantiles to recover the
+sample of potential curves and calculate the empirical quantifies to recover the
 confidence band. Note that the analytical posterior 90% confidence band is
 trivially accessible via the Gaussian Process assumption and the form of the
-posterior distriution - the results shouldn't be all that different in one
+posterior distribution - the results shouldn't be all that different in one
 dimension where the law of large numbers works quickly.
 
 ```{r credible_band}
@@ -177,7 +177,7 @@ dimension where the law of large numbers works quickly.
 ## Tuning the model
 The astute reader already noticed my arbitrary selection of the hyperparameters
 $\sigma_k = `r sigkern`$ and $\ell = `r lkern`$ in the squared exponential loss
-kernel above, which is, for refference:
+kernel above, which is, for reference:
 $$
 k(x_1, x_2) = e^{-\frac{\sigma_k^2}{2}\left(\frac{x_1-x_2}{\ell}\right)^2}
 $$
@@ -222,8 +222,8 @@ the mean function doesn't seem to shift all that much.
 A final note before moving on: there's a good way to account for the noise
 $\epsilon$ in the model, outlined in source [3], if you have a priori a good
 sense of the level of the noise $\sigma_\epsilon$. It is possible to estimate
-this noise using something like leave-one-out cross validation but I've ommitted
-this proceedure.
+this noise using something like leave-one-out cross validation but I've omitted
+this procedure.
 
 # 2D Gaussian Process
 A 2D GP is not much different from a 1D GP. The domain is similarly discretized
