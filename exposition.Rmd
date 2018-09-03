@@ -229,7 +229,16 @@ $x_{i,j} \textrm{ each }\in \mathbb{R}^2$.
 ```{r gp2d}
 ```
 
+```{r plot_gp2d, echo=F}
+```
+
+The above plots are draws from a 2D Gaussian Process with a mean function
+$\mu(x_1,x_2)=0$ for simplicity.
+
 # Sources
-1. https://en.wikipedia.org/wiki/Gaussian_process
-2. https://arxiv.org/abs/1505.02965
-3. http://www.gaussianprocess.org/gpml/chapters/RW2.pdf
+1. Wikipedia https://en.wikipedia.org/wiki/Gaussian_process
+2. Mark Ebden; "Gaussian Processes: A Quick Introduction"
+   https://arxiv.org/abs/1505.02965
+3. C. E. Rasmussen & C. K. I. Williams; "Gaussian Processes for Machine
+   Learning; Chapter 2 on Regression", the MIT Press, 2006, ISBN 026218253X
+   http://www.gaussianprocess.org/gpml/chapters/RW2.pdf

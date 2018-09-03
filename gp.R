@@ -11,7 +11,6 @@ library(ggplot2)
 library(MASS)
 library(reshape)
 library(latex2exp)
-library(knitr)
 
 ## @knitr set_params1
 # Parameters
@@ -332,35 +331,56 @@ plt_post_band_tuned
 
 
 ## @knitr gp2d
-t = c(0, 1)
-D = 10
+t = c(-pi, pi)
+D = 10 # D^2 number of grid points
+ndraws = 6 # draw 6 times from the gaussian process
 x1s = x2s = seq(t[1], t[2], length.out=D) # marginal collocation grid points
 gd = expand.grid(x1s, x2s) # collocated grid
 dm = dist(gd)
-# dmx = as.matrix(dm) # distance between each point on the collocated grid
+dmx = as.matrix(dm) # distance between each point on the collocated grid
 
 mu2d = function(pts){
     # pts in R^(n x p) -> Ys in R^n
-    # and I guess p = 2
-    ys = apply(pts, 1, prod)
+    # and p = 2 here i.e. we're working in 2D
+
+    # ys = apply(pts, 1, prod) # arbitrary mean function
+    ys = rep(0, dim(pts)[1]) # for simplicity use uniform 0 mean here
     return(ys)
 }
 
 mus = mu2d(gd)
-# TODO: straighten out the math here
 
 kernel_on_dist = function(r){
     # r is the distance between points already computed by e.g. dist()
     ell = 1
     a = 1/sqrt(pi^2) * exp(-1/2*r/ell) # exponential kernel wrt Malhab dist
+    # note that here the Malhabanobis distance is wrt the identity matrix
+    # because dist() supports natively Euclidean distance and... well, a more
+    # general distance function can be implemented later ;)
     return(a)
 }
 
-S = kernel_on_dist(dm)
+S = kernel_on_dist(dmx)
 
-# ys = t(mvrnorm(1, mu = 0, Sigma=S))
+# NOTE: <S> is n by n, <gd> is n by p
+stopifnot(dim(S)[1] == dim(S)[2])
+stopifnot(dim(S)[1] == dim(gd)[1])
 
-# TODO: plot the 2d samples
-# TODO: plot the 2d draws from the prior
-# TODO: plot the 2d draws from the posterior
-# TODO: plot the 2d 65% credible interval
+ys = t(mvrnorm(ndraws, mu = mus, Sigma=S))
+
+## @knitr plot_gp2d
+plot_2d_df = melt(
+                  data.frame(
+                             Y=ys,
+                             X1=gd[,1],
+                             X2=gd[,2]
+                             ),
+                  id=c("X1", "X2")
+                  )
+
+plt_2d = ggplot(plot_2d_df, aes(x=X1, y=X2)) +
+    geom_raster(aes(fill=value), interpolate=TRUE) +
+    facet_wrap(~variable) +
+    scale_fill_gradientn(colours = heat.colors(20))
+
+plt_2d
