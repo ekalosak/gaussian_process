@@ -377,10 +377,16 @@ plot_2d_df = melt(
                              ),
                   id=c("X1", "X2")
                   )
+colnames(plot_2d_df)[3] = "Draw"
+colnames(plot_2d_df)[4] = "Value"
 
 plt_2d = ggplot(plot_2d_df, aes(x=X1, y=X2)) +
-    geom_raster(aes(fill=value), interpolate=TRUE) +
-    facet_wrap(~variable) +
-    scale_fill_gradientn(colours = heat.colors(20))
+    geom_raster(aes(fill=Value), interpolate=TRUE) +
+    facet_wrap(~Draw) +
+    scale_fill_gradientn(colours = heat.colors(20)) +
+    theme(
+          strip.background = element_blank(),
+          strip.text.x = element_blank()
+          )
 
 plt_2d
