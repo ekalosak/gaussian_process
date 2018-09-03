@@ -352,7 +352,7 @@ mus = mu2d(gd)
 
 kernel_on_dist = function(r){
     # r is the distance between points already computed by e.g. dist()
-    ell = 1
+    ell = 2.5
     a = 1/sqrt(pi^2) * exp(-1/2*r/ell) # exponential kernel wrt Malhab dist
     # note that here the Malhabanobis distance is wrt the identity matrix
     # because dist() supports natively Euclidean distance and... well, a more
