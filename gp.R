@@ -384,6 +384,11 @@ plt_2d = ggplot(plot_2d_df, aes(x=X1, y=X2)) +
     geom_raster(aes(fill=Value), interpolate=TRUE) +
     facet_wrap(~Draw) +
     scale_fill_gradientn(colours = heat.colors(20)) +
+    geom_contour(
+                 color="steelblue",
+                 alpha=0.3,
+                 aes(z=Value)
+                 ) +
     theme(
           strip.background = element_blank(),
           strip.text.x = element_blank()
