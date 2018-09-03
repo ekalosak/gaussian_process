@@ -332,7 +332,7 @@ plt_post_band_tuned
 
 ## @knitr gp2d
 t = c(-pi, pi)
-D = 10 # D^2 number of grid points
+D = 50 # D^2 number of grid points
 ndraws = 6 # draw 6 times from the gaussian process
 x1s = x2s = seq(t[1], t[2], length.out=D) # marginal collocation grid points
 gd = expand.grid(x1s, x2s) # collocated grid
