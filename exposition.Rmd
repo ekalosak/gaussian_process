@@ -56,7 +56,7 @@ values of interest
 using the kernel yields a $D\times D$ covariance matrix:
 
 $$
-\Sigma_s = \[k(x_i, x_j)\]_{i,j \in T}
+\Sigma_s = [k(x_i, x_j)]_{i,j \in T}
 $$
 
 An important point here is that each discretized point on the $X$ axis is, in
