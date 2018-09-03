@@ -132,7 +132,7 @@ $$
 ```
 
   
-Next, I'll try to regress a point not in the sample using Gaussian process
+Next, I'll try to regress a point not in the sample using Gaussian Process
 regression a.k.a. kreiging. The unknown point will be at $x=`r xu`$ depicted
 above by the violet vertical line.
 
